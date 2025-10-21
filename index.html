@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lab 8.2 - IPC Communication Demo</title>
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Sarabun', Tahoma, 'Noto Sans Thai', Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+    
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      background: rgba(255, 255, 255, 0.1);
+      padding: 30px;
+      border-radius: 15px;
+      backdrop-filter: blur(10px);
+    }
+    
+    .header {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+    
+    .demo-section {
+      background: rgba(255, 255, 255, 0.1);
+      padding: 20px;
+      border-radius: 10px;
+      margin-bottom: 20px;
+    }
+    
+    .input-group {
+      margin: 15px 0;
+    }
+    
+    .input-group label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+    }
+    
+    .input-group input {
+      width: 100%;
+      padding: 10px;
+      border: none;
+      border-radius: 5px;
+      font-size: 16px;
+      box-sizing: border-box;
+    }
+    
+    .button {
+      background: rgba(255, 255, 255, 0.2);
+      border: 2px solid white;
+      color: white;
+      padding: 12px 24px;
+      border-radius: 25px;
+      cursor: pointer;
+      font-size: 16px;
+      margin: 10px 5px;
+      transition: all 0.3s ease;
+    }
+    
+    .button:hover {
+      background: white;
+      color: #667eea;
+      transform: translateY(-2px);
+    }
+    
+    .result-box {
+      background: rgba(0, 0, 0, 0.2);
+      padding: 15px;
+      border-radius: 8px;
+      margin-top: 15px;
+      font-family: monospace;
+      white-space: pre-wrap;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+    
+    .loading {
+      color: #ffd700;
+      font-style: italic;
+    }
+    
+    .success {
+      color: #90ee90;
+    }
+    
+    .error {
+      color: #ff6b6b;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>🔄 IPC Communication Demo</h1>
+      <p>การสื่อสารระหว่าง Main Process และ Renderer Process</p>
+    </div>
+
+    <!-- Login Section -->
+<div class="demo-section" id="loginSection">
+  <h3>🔐 ระบบ Login Agent</h3>
+  <div class="input-group">
+    <label>Agent ID:</label>
+    <input type="text" id="loginAgentId" placeholder="Agent001">
+  </div>
+  <div class="input-group">
+    <label>Password:</label>
+    <input type="password" id="loginPassword" placeholder="รหัสผ่าน">
+  </div>
+  <button class="button" onclick="login()">เข้าสู่ระบบ</button>
+  <div class="result-box" id="loginResult">กรุณาเข้าสู่ระบบ</div>
+</div>
+
+<!-- Dashboard Section -->
+<div id="dashboardSection" style="display: none;">
+  <p>สวัสดี, <span id="currentAgentName"></span> 👋</p>
+  <!-- ส่วน Agent Wallboard เดิมอยู่ที่นี่ -->
+</div>
+
+    <!-- Demo 1: ส่งข้อความพื้นฐาน -->
+    <div class="demo-section">
+      <h3>📤 Demo 1: ส่งข้อความไป Main Process</h3>
+      <p>ทดสอบการส่งข้อความและรับ response กลับมา</p>
+      
+      <div class="input-group">
+        <label>ข้อความที่ต้องการส่ง:</label>
+        <input type="text" id="messageInput" placeholder="พิมพ์ข้อความที่นี่..." value="Hello from Renderer Process!">
+      </div>
+      
+      <button class="button" onclick="sendMessage()">📤 ส่งข้อความ</button>
+      <button class="button" onclick="clearResult('messageResult')">🧹 เคลียร์</button>
+      
+      <div class="result-box" id="messageResult">กดปุ่ม "ส่งข้อความ" เพื่อทดสอบ IPC</div>
+    </div>
+
+    <!-- Demo 2: ระบบทักทาย -->
+    <div class="demo-section">
+      <h3>👋 Demo 2: ระบบทักทาย Agent</h3>
+      <p>จำลองการ login และทักทายเหมือนใน agent wallboard</p>
+      
+<div class="demo-section">
+  <h3>📊 Demo 3: Agent Wallboard Functions</h3>
+  <p>ฟังก์ชันสำหรับจัดการข้อมูล agents (เตรียมสำหรับ wallboard app)</p>
+  
+  <button class="button" onclick="loadAgents()">📊 โหลดข้อมูล Agents</button>
+  <button class="button" onclick="showStatusSelector()">🔄 เปลี่ยนสถานะ</button>
+  <button class="button" onclick="clearResult('agentResult')">🧹 เคลียร์</button>
+  
+  <div id="statusSelector" style="display: none; margin: 15px 0;">
+    <select id="agentSelect" style="padding: 8px; margin-right: 10px;">
+      <option value="">เลือก Agent</option>
+    </select>
+    
+    <select id="statusSelect" style="padding: 8px; margin-right: 10px;">
+      <option value="Available">Available</option>
+      <option value="Busy">Busy</option>
+      <option value="Break">Break</option>
+      <option value="Offline">Offline</option>
+    </select>
+    
+    <button class="button" onclick="changeStatus()">✅ เปลี่ยน</button>
+  </div>
+  
+  <div class="result-box" id="agentResult">กดปุ่ม "โหลดข้อมูล Agents" เพื่อเริ่มต้น</div>
+</div>
+
+      <div class="input-group">
+        <label>ชื่อ Agent:</label>
+        <input type="text" id="agentName" placeholder="ใส่ชื่อของคุณ..." value="Agent001">
+      </div>
+      
+      <button class="button" onclick="sayHello()">👋 เข้าสู่ระบบ</button>
+      <button class="button" onclick="clearResult('helloResult')">🧹 เคลียร์</button>
+      
+      <div class="result-box" id="helloResult">กดปุ่ม "เข้าสู่ระบบ" เพื่อทดสอบระบบทักทาย</div>
+    </div>
+
+    <!-- ข้อมูล Process -->
+    <div class="demo-section">
+      <h3>📊 Process Information</h3>
+      <div class="result-box">
+🖥️ <strong>Main Process:</strong> ทำงานใน Node.js environment, จัดการ business logic
+🎨 <strong>Renderer Process:</strong> ทำงานใน Chromium environment, แสดง UI
+🌉 <strong>Preload Script:</strong> ตัวกลางที่ปลอดภัยสำหรับ IPC communication
+
+<strong>🔄 การทำงาน:</strong>
+1. Renderer เรียก window.electronAPI.sendMessage()
+2. Preload ส่งต่อไป Main ด้วย ipcRenderer.invoke()
+3. Main ประมวลผลด้วย ipcMain.handle()
+4. Main ส่ง response กลับ
+5. Renderer ได้รับผลลัพธ์
+      </div>
+    </div>
+  </div>
+
+  <script>
+    console.log('🎨 [RENDERER] กำลังโหลด...');
+
+async function login() {
+  const agentId = document.getElementById('loginAgentId').value;
+  const password = document.getElementById('loginPassword').value;
+
+  const resultBox = document.getElementById('loginResult');
+  resultBox.textContent = 'กำลังตรวจสอบ...';
+  resultBox.className = 'result-box loading';
+
+  try {
+    const response = await window.electronAPI.login(agentId, password);
+    console.log('Login response:', response); 
+
+    if (response.success) {
+      resultBox.textContent = `ยินดีต้อนรับ ${response.agent.name} 👋`;
+      resultBox.className = 'result-box success';
+      document.getElementById('loginSection').style.display = 'none';
+      document.getElementById('dashboardSection').style.display = 'block';
+      document.getElementById('currentAgentName').textContent = response.agent.name;
+    } else {
+      resultBox.textContent = response.error;
+      resultBox.className = 'result-box error';
+    }
+  } catch (err) {
+    console.error('Login error:', err);
+    resultBox.textContent = `เกิดข้อผิดพลาด: ${err.message}`;
+    resultBox.className = 'result-box error';
+  }
+}
+
+    // ตรวจสอบว่า electronAPI พร้อมใช้งาน
+    if (window.electronAPI) {
+      console.log('✅ [RENDERER] electronAPI พร้อมใช้งาน');
+    } else {
+      console.error('❌ [RENDERER] electronAPI ไม่พร้อมใช้งาน');
+    }
+
+    // ฟังก์ชันแสดงผลลัพธ์
+    function displayResult(elementId, data, type = 'info') {
+      const element = document.getElementById(elementId);
+      const timestamp = new Date().toLocaleTimeString('th-TH');
+      
+      let content;
+      if (typeof data === 'object') {
+        content = JSON.stringify(data, null, 2);
+      } else {
+        content = data.toString();
+      }
+      
+      element.innerHTML = `[${timestamp}] ${content}`;
+      element.className = `result-box ${type}`;
+    }
+
+    // ฟังก์ชันส่งข้อความ
+    async function sendMessage() {
+      const message = document.getElementById('messageInput').value;
+      
+      if (!message.trim()) {
+        displayResult('messageResult', 'กรุณาใส่ข้อความ', 'error');
+        return;
+      }
+
+      try {
+        console.log('📤 [RENDERER] กำลังส่งข้อความ:', message);
+        displayResult('messageResult', 'กำลังส่งข้อความ...', 'loading');
+        
+        // ส่งข้อความไป Main Process
+        const response = await window.electronAPI.sendMessage(message);
+        
+        console.log('📥 [RENDERER] ได้รับ response:', response);
+        displayResult('messageResult', response, 'success');
+        
+      } catch (error) {
+        console.error('❌ [RENDERER] Error:', error);
+        displayResult('messageResult', `Error: ${error.message}`, 'error');
+      }
+    }
+
+    // ฟังก์ชันทักทาย
+    async function sayHello() {
+      const name = document.getElementById('agentName').value;
+      
+      if (!name.trim()) {
+        displayResult('helloResult', 'กรุณาใส่ชื่อ Agent', 'error');
+        return;
+      }
+
+      try {
+        console.log('👋 [RENDERER] กำลังทักทาย:', name);
+        displayResult('helloResult', 'กำลังเข้าสู่ระบบ...', 'loading');
+        
+        // ส่งคำทักทายไป Main Process
+        const response = await window.electronAPI.sayHello(name);
+        
+        console.log('📥 [RENDERER] ได้รับการทักทาย:', response);
+        
+        // แสดงผลลัพธ์แบบสวยงาม
+        const resultText = `
+🎉 เข้าสู่ระบบสำเร็จ!
+
+👤 Agent: ${response.name}
+💬 ข้อความ: ${response.greeting}
+⏰ เวลา: ${response.time}
+👥 Agents ออนไลน์: ${response.agentCount} คน
+
+✅ พร้อมทำงานแล้ว!`;
+
+        displayResult('helloResult', resultText, 'success');
+        
+      } catch (error) {
+        console.error('❌ [RENDERER] Error:', error);
+        displayResult('helloResult', `Error: ${error.message}`, 'error');
+      }
+    }
+
+    // ฟังก์ชันเคลียร์ผลลัพธ์
+    function clearResult(elementId) {
+      const element = document.getElementById(elementId);
+      element.innerHTML = 'เคลียร์แล้ว...';
+      element.className = 'result-box';
+    }
+
+    // Event Listeners
+    document.getElementById('messageInput').addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        sendMessage();
+      }
+    });
+
+    document.getElementById('agentName').addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        sayHello();
+      }
+    });
+
+// ตัวแปรเก็บข้อมูล agents
+let agentsData = null;
+
+// ฟังก์ชันโหลดข้อมูล agents
+async function loadAgents() {
+  try {
+    console.log('📊 [RENDERER] กำลังโหลดข้อมูล agents...');
+    displayResult('agentResult', 'กำลังโหลดข้อมูล agents...', 'loading');
+    
+    // เรียก API ผ่าน IPC
+    const response = await window.electronAPI.getAgents();
+    
+    if (response.success) {
+      agentsData = response.data;
+      console.log('✅ [RENDERER] โหลดข้อมูลสำเร็จ:', agentsData);
+      
+      // แสดงข้อมูล agents
+      displayAgentData(agentsData);
+      
+      // อัพเดท dropdown สำหรับเปลี่ยนสถานะ
+      updateAgentSelector(agentsData.agents);
+      
+    } else {
+      throw new Error(response.error);
+    }
+    
+  } catch (error) {
+    console.error('❌ [RENDERER] Error โหลดข้อมูล:', error);
+    displayResult('agentResult', `Error: ${error.message}`, 'error');
+  }
+}
+
+// ฟังก์ชันแสดงข้อมูล agents
+function displayAgentData(data) {
+  const agentList = data.agents.map(agent => {
+    const statusEmoji = {
+      'Available': '🟢',
+      'Busy': '🔴', 
+      'Break': '🟡',
+      'Offline': '⚫'
+    };
+    
+    return `${statusEmoji[agent.status] || '❓'} ${agent.name} (${agent.id})
+   📞 Ext: ${agent.extension} | 🏢 ${agent.department}
+   📊 Calls: ${agent.totalCalls} | ⏱️ Avg: ${agent.avgCallTime}s`;
+  }).join('\n\n');
+  
+  const statistics = data.statistics;
+  
+  const resultText = `
+📊 AGENT WALLBOARD DATA
+======================
+
+👥 AGENTS (${statistics.totalAgents} คน):
+${agentList}
+
+📈 STATISTICS:
+🟢 Available: ${statistics.availableAgents} คน
+🔴 Busy: ${statistics.busyAgents} คน  
+🟡 Break: ${statistics.onBreakAgents} คน
+📞 Total Calls Today: ${statistics.totalCallsToday}
+⏰ Avg Wait Time: ${statistics.avgWaitTime}s
+
+⏰ Last Updated: ${new Date().toLocaleString('th-TH')}`;
+
+  displayResult('agentResult', resultText, 'success');
+}
+
+// ฟังก์ชันอัพเดท dropdown สำหรับเลือก agent
+function updateAgentSelector(agents) {
+  const agentSelect = document.getElementById('agentSelect');
+  agentSelect.innerHTML = '<option value="">เลือก Agent</option>';
+  
+  agents.forEach(agent => {
+    const option = document.createElement('option');
+    option.value = agent.id;
+    option.textContent = `${agent.name} (${agent.id}) - ${agent.status}`;
+    agentSelect.appendChild(option);
+  });
+}
+
+// ฟังก์ชันแสดง/ซ่อน status selector
+function showStatusSelector() {
+  if (!agentsData) {
+    displayResult('agentResult', 'กรุณาโหลดข้อมูล agents ก่อน', 'error');
+    return;
+  }
+  
+  const selector = document.getElementById('statusSelector');
+  selector.style.display = selector.style.display === 'none' ? 'block' : 'none';
+}
+
+// ฟังก์ชันเปลี่ยนสถานะ agent
+async function changeStatus() {
+  const agentId = document.getElementById('agentSelect').value;
+  const newStatus = document.getElementById('statusSelect').value;
+  
+  if (!agentId || !newStatus) {
+    displayResult('agentResult', 'กรุณาเลือก Agent และ Status', 'error');
+    return;
+  }
+  
+  try {
+    console.log(`🔄 [RENDERER] เปลี่ยนสถานะ ${agentId} เป็น ${newStatus}`);
+    displayResult('agentResult', `กำลังเปลี่ยนสถานะ ${agentId}...`, 'loading');
+    
+    // เรียก API เปลี่ยนสถานะ
+    const response = await window.electronAPI.changeAgentStatus(agentId, newStatus);
+    
+    if (response.success) {
+      console.log('✅ [RENDERER] เปลี่ยนสถานะสำเร็จ:', response);
+      
+      const resultText = `
+✅ เปลี่ยนสถานะสำเร็จ!
+
+👤 Agent: ${response.agent.name} (${response.agent.id})
+🔄 Status: ${response.agent.status}
+⏰ เวลา: ${new Date(response.agent.lastStatusChange).toLocaleString('th-TH')}
+
+${response.message}`;
+
+      displayResult('agentResult', resultText, 'success');
+      
+      // โหลดข้อมูลใหม่เพื่อแสดงการเปลี่ยนแปลง
+      setTimeout(() => {
+        loadAgents();
+      }, 2000);
+      
+    } else {
+      throw new Error(response.error);
+    }
+    
+  } catch (error) {
+    console.error('❌ [RENDERER] Error เปลี่ยนสถานะ:', error);
+    displayResult('agentResult', `Error: ${error.message}`, 'error');
+  }
+}
+
+function showNotification(agent) {
+  alert(`📢 Agent ${agent.name} (${agent.id}) เปลี่ยนสถานะเป็น ${agent.status} ⏰ ${new Date(agent.time).toLocaleTimeString('th-TH')}`);
+}
+
+// เริ่มฟัง Notification เมื่อโหลด Dashboard
+window.addEventListener('DOMContentLoaded', () => {
+  if (window.electronAPI) {
+    window.electronAPI.onAgentStatusChanged((agent) => {
+      console.log('🔔 [RENDERER] Agent status changed:', agent);
+      showNotification(agent);
+    });
+  }
+});
+
+    // เมื่อ page โหลดเสร็จ
+    window.addEventListener('DOMContentLoaded', () => {
+      console.log('📄 [RENDERER] HTML โหลดเสร็จ');
+    });
+
+    window.addEventListener('load', () => {
+      console.log('✅ [RENDERER] ทุกอย่างพร้อมแล้ว');
+    });
+  </script>
+</body>
+</html>
